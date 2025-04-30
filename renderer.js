@@ -1,5 +1,4 @@
-const THREE = require('three');
-const databaseService = require('./database');
+//const databaseService = require('./database');
 class MainRenderer {
     constructor() {
 
@@ -99,32 +98,30 @@ class MainRenderer {
 
     // 添加显示游戏记录的方法
     showGameRecords() {
-        databaseService.getAllGameRecords((err, records) => {
-            if (err) {
+        fetch('/api/records')
+            .then(response => response.json())
+            .then(records => {
+                const tbody = document.querySelector('#recordsTable tbody');
+                tbody.innerHTML = '';
+
+                records.forEach(record => {
+                    const row = document.createElement('tr');
+                    const date = new Date(record.start_time);
+                    const formattedDate = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+
+                    row.innerHTML = `
+                        <td style="border: 1px solid #444; padding: 8px;">${formattedDate}</td>
+                        <td style="border: 1px solid #444; padding: 8px;">${record.cube_count}</td>
+                        <td style="border: 1px solid #444; padding: 8px;">${record.game_time}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById('recordsModal').style.display = 'block';
+            })
+            .catch(err => {
                 console.error('Error fetching records:', err);
-                return;
-            }
-
-            const tbody = document.querySelector('#recordsTable tbody');
-            tbody.innerHTML = '';
-
-            records.forEach(record => {
-                const row = document.createElement('tr');
-
-                // 格式化日期时间
-                const date = new Date(record.start_time);
-                const formattedDate = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-
-                row.innerHTML = `
-                <td style="border: 1px solid #444; padding: 8px;">${formattedDate}</td>
-                <td style="border: 1px solid #444; padding: 8px;">${record.cube_count}</td>
-                <td style="border: 1px solid #444; padding: 8px;">${record.game_time}</td>
-            `;
-                tbody.appendChild(row);
             });
-
-            document.getElementById('recordsModal').style.display = 'block';
-        });
     }
 
     checkCollisions() {
@@ -151,15 +148,20 @@ class MainRenderer {
         this.stopTimer();
 
         // 获取游戏数据
-        const cubeCount = this.cubeScene.cubes.length; // 初始立方体数量
+        const cubeCount = this.cubeScene.cubes.length;
         const gameTime = document.getElementById('timeDisplay').textContent;
 
-        // 保存到数据库
-        databaseService.saveGameRecord(cubeCount, gameTime, (err) => {
-            if (err) {
+        // 保存到服务器
+        fetch('/api/records', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ cubeCount, gameTime })
+        })
+            .catch(err => {
                 console.error('Failed to save game record:', err);
-            }
-        });
+            });
 
         const gameStatus = document.getElementById('gameStatus');
         gameStatus.innerHTML = `

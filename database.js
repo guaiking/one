@@ -3,13 +3,21 @@ const path = require('path');
 
 class DatabaseService {
     constructor() {
-        // 数据库文件路径
-        const dbPath = path.join(__dirname, 'game_records.db');
+        // 确保数据库文件路径在服务器上是可写的
+        const dbPath = path.join(process.cwd(), 'data', 'game_records.db');
+
+        // 确保data目录存在
+        const fs = require('fs');
+        if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
+            fs.mkdirSync(path.join(process.cwd(), 'data'));
+        }
+
         this.db = new sqlite3.Database(dbPath, (err) => {
             if (err) {
                 console.error('Database connection error:', err.message);
+                process.exit(1);
             } else {
-                console.log('Connected to the game records database.');
+                console.log('Connected to the game records database at:', dbPath);
                 this.initializeDatabase();
             }
         });
